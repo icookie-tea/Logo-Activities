@@ -1,18 +1,26 @@
 .activities-icon {
-  -st-icon-style: symbolic; }
-  
+  -st-icon-style: symbolic;
+}
+
 .activities-layout {
-  spacing: 6px; }
+  spacing: 6px;
+}
+
 #panel .panel-button#panellogoActivities StBoxLayout {
- padding: 0 0.2045em;}
+  padding: 0 0.2045em;
+}
 
 .workspace-indicators {
-  spacing: 5px; }
+  spacing: 5px;
+}
 
 .workspace-dot {
   border-radius: 999px;
   min-width: 0.5455em;
   min-height: 0.5455em;
-  background-color: #ffffff; }
-  .workspace-dot:active {
-    min-width: 1.091em; }
+  background-color: #ffffff;
+}
+
+.workspace-dot:active {
+  min-width: 1.091em;
+}

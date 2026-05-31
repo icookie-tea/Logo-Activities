@@ -23,20 +23,17 @@ import Atk from 'gi://Atk';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Meta from 'gi://Meta';
-import Shell from 'gi://Shell';
 import Graphene from 'gi://Graphene';
-import AccountsService from 'gi://AccountsService';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
-import * as Panel from 'resource:///org/gnome/shell/ui/panel.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as WorkspaceSwitcherPopup from 'resource:///org/gnome/shell/ui/workspaceSwitcherPopup.js';
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const INACTIVE_WORKSPACE_DOT_SCALE = 0.75;
+const BUTTON_DND_ACTIVATION_TIMEOUT = 250;
 
-const SCHEMA_NAME = 'org.gnome.shell.extensions.logoactivities';
 const KEY_LABEL = 'label';
 const KEY_POPUP = 'popup';
 const KEY_TEXT = 'text';
@@ -47,22 +44,16 @@ const KEY_ICON_SIZE = 'icon-size';
 const KEY_ICON_TYPE = 'icon-type';
 const KEY_ICON_FILE = 'icon-file';
 
+const ActivitiesIndicator = GObject.registerClass(
+class ActivitiesIndicator extends PanelMenu.Button {
 
-    const ActivitiesIndicator = GObject.registerClass(
-    class ActivitiesIndicator extends PanelMenu.Button {
-    
     _init(settings) {
         super._init(0.5, 'Logo Activities', true);
         this.accessible_role = Atk.Role.TOGGLE_BUTTON;
         this.reactive = true;
         this.can_focus = true;
-        
         this.name = 'panellogoActivities';
-        
-        /* Translators: If there is no suitable word for "Activities"
-           in your language, you can use the word for "Overview". */
-           
-        
+
         this.text_label = settings.get_boolean(KEY_LABEL);
         this.activities_icon = settings.get_boolean(KEY_ICON);
         this.text = settings.get_string(KEY_TEXT);
@@ -74,7 +65,7 @@ const KEY_ICON_FILE = 'icon-file';
         this.icon_size = settings.get_int(KEY_ICON_SIZE);
         this._settings = settings;
 
-        this._settingsID = settings.connect("changed", () => {
+        this._settingsID = settings.connect('changed', () => {
             this.text_label = settings.get_boolean(KEY_LABEL);
             this.activities_icon = settings.get_boolean(KEY_ICON);
             this.text = settings.get_string(KEY_TEXT);
@@ -87,18 +78,18 @@ const KEY_ICON_FILE = 'icon-file';
             this._set_icon();
             this._set_label();
         });
-        
+
         let bin = new St.Bin();
         this.add_child(bin);
-        
+
         this._container = new St.BoxLayout({style_class: 'activities-layout'});
         bin.set_child(this._container);
-        
+
         this._iconBox = new St.Bin({
-        y_align: Clutter.ActorAlign.CENTER,
-        });         
-        this._container.add_child(this._iconBox);        
-          
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._container.add_child(this._iconBox);
+
         this._label = new St.Label({
             text: _('Activities'),
             y_align: Clutter.ActorAlign.CENTER,
@@ -110,33 +101,29 @@ const KEY_ICON_FILE = 'icon-file';
 
         this._set_icon();
         this._set_label();
-        
-        this.label_actor = this._label;
-        
+
         this._showingSignal = Main.overview.connect('showing', () => {
             this.add_style_pseudo_class('checked');
             this.add_accessible_state(Atk.StateType.CHECKED);
-        });        
-        
+        });
+
         this._hidingSignal = Main.overview.connect('hiding', () => {
             this.remove_style_pseudo_class('checked');
             this.remove_accessible_state(Atk.StateType.CHECKED);
         });
 
-        this._scrollEventId = this.connect('scroll-event', this.scrollEvent.bind(this));         
-                
+        this._scrollEventId = this.connect('scroll-event', this.scrollEvent.bind(this));
+
         this._xdndTimeOut = 0;
         this.wm = global.workspace_manager;
-        
     }
-   
-     _set_icon() {
+
+    _set_icon() {
         if (!this.activities_icon) {
             this._iconBox.visible = false;
             return;
         }
 
-        // Destroy previous icon to avoid stale actor accumulation
         const oldChild = this._iconBox.get_child();
         if (oldChild)
             oldChild.destroy();
@@ -154,7 +141,7 @@ const KEY_ICON_FILE = 'icon-file';
                     });
                 }
             } catch (e) {
-                // File not found or invalid; fall through to named icon
+                // fall through to named icon
             }
         }
 
@@ -169,7 +156,7 @@ const KEY_ICON_FILE = 'icon-file';
         this._iconBox.set_child(icon);
         this._iconBox.visible = true;
     }
-    
+
     _set_label() {
         if (this.text_label) {
             this._label.set_text(this.text || _('Activities'));
@@ -178,10 +165,8 @@ const KEY_ICON_FILE = 'icon-file';
             this._label.visible = false;
         }
 
-        // Workspace dots are shown only when label is disabled
-        if (this._workspaceIndicators) {
+        if (this._workspaceIndicators)
             this._workspaceIndicators.visible = !this.text_label;
-        }
     }
 
     handleDragOver(source, _actor, _x, _y, _time) {
@@ -198,7 +183,7 @@ const KEY_ICON_FILE = 'icon-file';
         return DND.DragMotionResult.CONTINUE;
     }
 
-    vfunc_event(event) {    
+    vfunc_event(event) {
         if (event.type() == Clutter.EventType.TOUCH_END ||
             event.type() == Clutter.EventType.BUTTON_RELEASE) {
             if (Main.overview.shouldToggleByCornerOrButton())
@@ -229,7 +214,7 @@ const KEY_ICON_FILE = 'icon-file';
         this._xdndTimeOut = 0;
         return GLib.SOURCE_REMOVE;
     }
-    
+
     scrollEvent(actor, event) {
         let direction;
         switch (event.get_scroll_direction()) {
@@ -244,7 +229,7 @@ const KEY_ICON_FILE = 'icon-file';
         default:
             return Clutter.EVENT_STOP;
         }
-        
+
         let gap = event.get_time() - this._time;
         if (gap < 200 && gap >= 0)
             return Clutter.EVENT_STOP;
@@ -255,57 +240,42 @@ const KEY_ICON_FILE = 'icon-file';
         return Clutter.EVENT_STOP;
     }
 
-
     switchWorkspace(direction) {
         let ws = this.getWorkSpace();
-
         let activeIndex = this.wm.get_active_workspace_index();
 
         let newWs;
-        if (direction == Meta.MotionDirection.UP) {
-            if (activeIndex == 0 )
-                newWs = 0; //ws.length - 1;
-            else
-                newWs = activeIndex - 1;
-        } else {
-            if (activeIndex == (ws.length - 1) )
-                newWs = ws.length - 1; //0;
-            else
-                newWs = activeIndex + 1;
-        }
-        
+        if (direction === Meta.MotionDirection.UP)
+            newWs = Math.max(activeIndex - 1, 0);
+        else
+            newWs = Math.min(activeIndex + 1, ws.length - 1);
+
         if (this.desktopscroll)
-        this.actionMoveWorkspace(ws[newWs]);
-        else
-        return
-        
+            this.actionMoveWorkspace(ws[newWs]);
+
         if (this.popup)
-        this.switcherPopup(direction, ws[newWs]);
-        else
-        return 
-        
+            this.switcherPopup(direction, ws[newWs]);
     }
-    
+
     switcherPopup(direction, newWs) {
-        if (!Main.overview.visible) {
-            if (this._workspaceSwitcherPopup == null) {
-                Main.wm._workspaceTracker.blockUpdates();
-                this._workspaceSwitcherPopup = new WorkspaceSwitcherPopup.WorkspaceSwitcherPopup();
-                this._workspaceSwitcherPopup.connect('destroy', () => {
-                    Main.wm._workspaceTracker.unblockUpdates();
-                    this._workspaceSwitcherPopup = null;
-                });
-            }
-            this._workspaceSwitcherPopup.display(newWs.index());
+        if (Main.overview.visible)
+            return;
+
+        if (this._workspaceSwitcherPopup == null) {
+            Main.wm._workspaceTracker.blockUpdates();
+            this._workspaceSwitcherPopup = new WorkspaceSwitcherPopup.WorkspaceSwitcherPopup();
+            this._workspaceSwitcherPopup.connect('destroy', () => {
+                Main.wm._workspaceTracker.unblockUpdates();
+                this._workspaceSwitcherPopup = null;
+            });
         }
+        this._workspaceSwitcherPopup.display(newWs.index());
     }
 
     getWorkSpace() {
         let activeWs = this.wm.get_active_workspace();
-
         let activeIndex = activeWs.index();
         let ws = [];
-
         ws[activeIndex] = activeWs;
 
         const vertical = this.wm.layout_rows === -1;
@@ -331,12 +301,11 @@ const KEY_ICON_FILE = 'icon-file';
             return;
 
         let activeWorkspace = this.wm.get_active_workspace();
-
         if (activeWorkspace != workspace)
             workspace.activate(global.get_current_time());
     }
-    
-     _onDestroy() {
+
+    _onDestroy() {
         if (this._showingSignal) {
             Main.overview.disconnect(this._showingSignal);
             this._showingSignal = null;
@@ -351,17 +320,17 @@ const KEY_ICON_FILE = 'icon-file';
             GLib.Source.remove(this._xdndTimeOut);
             this._xdndTimeOut = null;
         }
-        
+
         if (this._scrollEventId != null) {
             this.disconnect(this._scrollEventId);
             this._scrollEventId = null;
         }
-        
+
         if (this._settingsID) {
             this._settings.disconnect(this._settingsID);
             this._settingsID = null;
         }
-        
+
         super.destroy();
     }
 });
@@ -422,7 +391,6 @@ const WorkspaceDot = GObject.registerClass({
 
     vfunc_allocate(box) {
         this.set_allocation(box);
-
         box.set_origin(0, 0);
         this._dot.allocate(box);
     }
@@ -510,7 +478,6 @@ class WorkspaceIndicators extends St.BoxLayout {
         else
             widthMultiplier = 2.75;
 
-
         this.get_children().forEach((indicator, index) => {
             const distance = Math.abs(index - activeWorkspace);
             indicator.expansion = Math.clamp(1 - distance, 0, 1);
@@ -518,7 +485,6 @@ class WorkspaceIndicators extends St.BoxLayout {
         });
     }
 });
-
 
 export default class ActivitiesExtension extends Extension {
     enable() {
