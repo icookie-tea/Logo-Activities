@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a GNOME Shell extension ("Activities Icon & Label") that replaces the default "Activities" button in the GNOME top panel with a customizable icon and/or text label. It also supports scroll-to-switch-workspaces and an optional workspace indicator in the right panel area.
+This is a GNOME Shell extension ("Activities Icon & Label") that replaces the default "Activities" button in the GNOME top panel with a customizable icon and/or text label. It integrates workspace indicator dots directly into the replacement button and supports scroll-to-switch-workspaces.
 
 - **UUID**: `logoactivities@github.com.orbitcorrection`
 - **Supported shell versions**: 45, 46, 47, 48, 49, 50
@@ -16,49 +16,54 @@ The extension is a single-directory GNOME Shell extension using ESM (ES modules)
 
 ### `extension.js` — Main extension code
 
-Four custom widget classes, registered via `GObject.registerClass`:
+Three custom widget classes, registered via `GObject.registerClass`:
 
-- **`ActivitiesIndicator`** — The primary replacement Activities button on the left side of the panel. Contains three children in an `St.BoxLayout`: an `_iconBox` (`St.Bin`), a `_label` (`St.Label`), and `_workspaceIndicators` (`WorkspaceIndicators`). Handles overview toggle on click/keypress, DND activation, and workspace scrolling via scroll events. **Layout behavior**: icon visibility is controlled by the `icon` setting; label and workspace dots are mutually exclusive — label replaces dots when enabled.
-- **`WorkspaceDot`** — Animated workspace dot actor with `expansion` (0–1) and `width-multiplier` properties. Supports `scaleIn()` and `scaleOutAndDestroy()` transitions.
-- **`WorkspaceIndicators`** — Container that creates/reparents/destroys `WorkspaceDot` children based on `Main.createWorkspacesAdjustment`. Manages dot expansion based on distance from active workspace. Now integrated directly into `ActivitiesIndicator` rather than in a separate right-side button.
-- **`ActivitiesButton`** — Optional right-side panel button for workspace indicators (controlled by `panel-indicator` setting). Separate from the main `ActivitiesIndicator`.
-- **`ActivitiesExtension`** — Entry point. On `enable()`: hides stock activities button, creates `ActivitiesIndicator` on the left, and conditionally creates `ActivitiesButton` on the right. On `disable()`: destroys widgets and restores stock button.
+- **`ActivitiesIndicator`** — The replacement Activities button on the left side of the panel. Extends `PanelMenu.Button`. Contains an `St.BoxLayout` (`_container`, class `activities-layout`) with three children: `_iconBox` (`St.Bin`), `_label` (`St.Label`), and `_workspaceIndicators` (`WorkspaceIndicators`). Handles overview toggle on click/keypress, DND activation, and workspace scrolling via scroll events. **Layout behavior**: icon visibility controlled by `icon` setting; label and workspace dots are mutually exclusive — label replaces dots when enabled.
+- **`WorkspaceDot`** — Animated workspace dot actor extending `Clutter.Actor`. Contains an `St.Widget` child with style class `workspace-dot`. Has `expansion` (0–1) and `width-multiplier` properties. Supports `scaleIn()` and `scaleOutAndDestroy()` transitions. Dot sizing comes from CSS `min-width`/`min-height`, matching GNOME Shell's default implementation.
+- **`WorkspaceIndicators`** — `St.BoxLayout` container (class `workspace-indicators`, spacing 5px) that creates/reparents/destroys `WorkspaceDot` children based on `Main.createWorkspacesAdjustment`. Manages dot expansion/distance from active workspace. Width multiplier thresholds match GNOME Shell defaults (≤2 → 3.625, ≤5 → 3.25, else 2.75).
+- **`ActivitiesExtension`** — Entry point. `enable()`: hides stock activities button, creates `ActivitiesIndicator` on the left. `disable()`: destroys widget and restores stock button.
 
 #### Icon source support
 
 `_set_icon()` supports two modes via the `icon-type` setting:
 - **`'named'`** (default): Uses `St.Icon.icon_name` from the `icon-name` GSettings key. Falls back to `'start-here'`.
-- **`'file'`**: Uses `Gio.FileIcon` + `St.Icon.gicon` from the `icon-file` GSettings path. If the file doesn't exist, falls back to named icon.
+- **`'file'`**: Uses `Gio.FileIcon` + `St.Icon.gicon` from the `icon-file` GSettings path. Falls back to named icon if file doesn't exist.
+
+Icon size is set programmatically via `St.Icon.icon_size` from the `icon-size` setting (not via CSS).
 
 ### `prefs.js` — Preferences UI
 
-Uses GTK widgets organized in three framed sections:
+Uses libadwaita widgets (`Adw.PreferencesPage`, `Adw.PreferencesGroup`, `Adw.*Row`) following GNOME 45+ conventions:
 
-1. **Icon Settings** — Show toggle, icon source radio buttons (Named Icon / Custom File), named icon text entry, file chooser section (Browse/Clear buttons, path display with validation)
-2. **Label Settings** — Show toggle, label text entry
-3. **Behavior** — Desktop Scroll, Popup Indicator, Panel Indicator toggles
+1. **Icon group** — `Adw.SwitchRow` for show/hide, `Adw.SpinRow` for icon size (16–32, step 2), `Adw.ComboRow` for source (Named Icon / Custom File), `Adw.ActionRow` with `Gtk.Entry` for icon name, `Adw.ActionRow` with Browse/Clear buttons and dynamic subtitle for custom file path.
+2. **Label group** — `Adw.SwitchRow` for show/hide, `Adw.ActionRow` with `Gtk.Entry` for label text.
+3. **Behavior group** — `Adw.SwitchRow` for Desktop Scroll and Popup Indicator.
 
-File validation: the path label shows the selected path in grey, or a red "Not found" warning if the file is missing. Uses `Gtk.FileChooserNative` with an image filter (`add_pixbuf_formats()` + `*.svg`).
+Uses `fillPreferencesWindow(window)` (modern API) with `settings.bind()` for bidirectional GSettings binding. File validation shows path in subtitle, with "File not found" prefix for missing files. Search enabled via `window.set_search_enabled(true)`.
 
 ### `schemas/org.gnome.shell.extensions.logoactivities.gschema.xml`
 
 GSettings keys:
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `icon` | bool | `true` | Show icon |
-| `icon-name` | string | `'start-here'` | Named icon to use (when `icon-type` is `'named'`) |
-| `icon-type` | string | `'named'` | Icon source: `'named'` or `'file'` |
-| `icon-file` | string | `''` | File path for custom icon (when `icon-type` is `'file'`) |
-| `label` | bool | `false` | Show text label (replaces workspace dots when on) |
-| `text` | string | `'Activities'` | Label text |
-| `scroll` | bool | `true` | Enable workspace scrolling on the button |
-| `popup` | bool | `false` | Show workspace switcher popup when scrolling |
-| `panel-indicator` | bool | `false` | Show workspace indicators on the right panel |
+| Key | Type | Default | Range | Description |
+|-----|------|---------|-------|-------------|
+| `icon` | bool | `true` | — | Show icon |
+| `icon-size` | int | `16` | 16–32 | Icon size in pixels |
+| `icon-type` | string | `'named'` | — | Icon source: `'named'` or `'file'` |
+| `icon-name` | string | `'start-here'` | — | Named icon to use (when `icon-type` is `'named'`) |
+| `icon-file` | string | `''` | — | File path for custom icon (when `icon-type` is `'file'`) |
+| `label` | bool | `false` | — | Show text label (replaces workspace dots when on) |
+| `text` | string | `'Activities'` | — | Label text |
+| `scroll` | bool | `true` | — | Enable workspace scrolling on the button |
+| `popup` | bool | `false` | — | Show workspace switcher popup when scrolling |
 
 ### `stylesheet.css`
 
-Styles the icon (`.activities-icon`, 16px symbolic), layout spacing (`.activities-layout`, 6px), and panel button padding.
+- `.activities-icon` — symbolic icon style (size set programmatically)
+- `.activities-layout` — 6px spacing between icon, label, and dots
+- `#panel .panel-button#panellogoActivities StBoxLayout` — 0.2045em horizontal padding (matching GNOME default `$scaled_padding * 0.5`)
+- `.workspace-indicators` — 5px spacing between dots (matching GNOME default)
+- `.workspace-dot` — 0.5455em min dimensions, 999px border-radius (circular), white background
 
 ## Development
 
@@ -90,7 +95,7 @@ In a nested session (recommended for development):
 dbus-run-session -- gnome-shell --nested --wayland
 ```
 
-Or on the running session: press `Alt+F2`, type `r`, press Enter (X11 only; on Wayland, log out and back in).
+On a running session (X11): press `Alt+F2`, type `r`, press Enter. On Wayland, log out and back in.
 
 ### Schema compilation
 
@@ -100,13 +105,14 @@ glib-compile-schemas logoactivities@github.com.orbitcorrection/schemas/
 
 ## Key GNOME Shell API patterns used
 
-- **PanelMenu.Button** — Base class for all panel buttons; handles menu, DND, accessibility
-- **Clutter.Actor** — Base actor class for `WorkspaceDot`
+- **PanelMenu.Button** — Base class for panel buttons; handles menu, DND, accessibility, hpadding from CSS `-natural-hpadding`/`-minimum-hpadding`
+- **Clutter.Actor** — Base actor class for `WorkspaceDot`; provides layout lifecycle (preferred size, allocate)
 - **St (Shell Toolkit)** — CSS-styled widgets (`St.Bin`, `St.BoxLayout`, `St.Icon`, `St.Label`, `St.Widget`)
 - **Gio.FileIcon** — GIcon implementation for file-based icons; set as `gicon` on `St.Icon`
 - **Main.overview** — Global overview controller (`showing`/`hiding` signals, `toggle()`, `shouldToggleByCornerOrButton()`)
 - **Main.panel** — Panel singleton for `addToStatusArea()` and `statusArea[]` access
 - **Main.createWorkspacesAdjustment** — Creates adjustment tracking active workspace and count
 - **global.workspace_manager** — Workspace state (`get_active_workspace_index()`, `n_workspaces`, `layout_rows`)
-- **Gio.Settings** — GSettings binding
+- **Gio.Settings** / `settings.bind()` — GSettings binding (bidirectional for Adw rows)
+- **Adw.PreferencesPage / Adw.PreferencesGroup / Adw.*Row** — libadwaita preferences widgets
 - **GLib** — Main loop utilities (`timeout_add`, `source_remove`, `SOURCE_REMOVE`)
