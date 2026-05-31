@@ -9,6 +9,7 @@ const KEY_TEXT = 'text';
 const KEY_ICON = 'icon';
 const KEY_ICONNAME = 'icon-name';
 const KEY_SCROLL = 'scroll';
+const KEY_ICON_SIZE = 'icon-size';
 const KEY_ICON_TYPE = 'icon-type';
 const KEY_ICON_FILE = 'icon-file';
 
@@ -34,6 +35,27 @@ function buildPrefsWidget(settings) {
     });
 
     iconVbox.append(addItemSwitch('Show Icon', KEY_ICON, settings));
+
+    // Icon size scale
+    let sizeHbox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5});
+    let sizeLabel = new Gtk.Label({label: 'Icon size:', xalign: 0, hexpand: true});
+    sizeHbox.append(sizeLabel);
+    let sizeAdjustment = new Gtk.Adjustment({
+        lower: 16, upper: 33, step_increment: 2,
+        value: settings.get_int(KEY_ICON_SIZE),
+    });
+    let sizeScale = new Gtk.Scale({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        adjustment: sizeAdjustment,
+        digits: 0,
+        hexpand: true,
+    });
+    sizeScale.set_size_request(150, -1);
+    sizeScale.connect('value-changed', scale => {
+        settings.set_int(KEY_ICON_SIZE, scale.get_value());
+    });
+    sizeHbox.append(sizeScale);
+    iconVbox.append(sizeHbox);
 
     // Icon type radio buttons
     let typeHbox = new Gtk.Box({orientation: Gtk.Orientation.HORIZONTAL, margin_top: 5});

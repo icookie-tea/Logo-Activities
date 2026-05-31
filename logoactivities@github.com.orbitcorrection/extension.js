@@ -43,6 +43,7 @@ const KEY_TEXT = 'text';
 const KEY_ICON = 'icon';
 const KEY_ICONNAME = 'icon-name';
 const KEY_SCROLL = 'scroll';
+const KEY_ICON_SIZE = 'icon-size';
 const KEY_ICON_TYPE = 'icon-type';
 const KEY_ICON_FILE = 'icon-file';
 
@@ -70,6 +71,7 @@ const KEY_ICON_FILE = 'icon-file';
         this.popup = settings.get_boolean(KEY_POPUP);
         this.icon_type = settings.get_string(KEY_ICON_TYPE);
         this.icon_file = settings.get_string(KEY_ICON_FILE);
+        this.icon_size = settings.get_int(KEY_ICON_SIZE);
         this._settings = settings;
 
         this._settingsID = settings.connect("changed", () => {
@@ -81,6 +83,7 @@ const KEY_ICON_FILE = 'icon-file';
             this.popup = settings.get_boolean(KEY_POPUP);
             this.icon_type = settings.get_string(KEY_ICON_TYPE);
             this.icon_file = settings.get_string(KEY_ICON_FILE);
+            this.icon_size = settings.get_int(KEY_ICON_SIZE);
             this._set_icon();
             this._set_label();
         });
@@ -147,6 +150,7 @@ const KEY_ICON_FILE = 'icon-file';
                     icon = new St.Icon({
                         gicon: fileIcon,
                         style_class: 'activities-icon',
+                        icon_size: this.icon_size || 16,
                     });
                 }
             } catch (e) {
@@ -158,6 +162,7 @@ const KEY_ICON_FILE = 'icon-file';
             icon = new St.Icon({
                 icon_name: this.activities_icon_name || 'start-here',
                 style_class: 'activities-icon',
+                icon_size: this.icon_size || 16,
             });
         }
 

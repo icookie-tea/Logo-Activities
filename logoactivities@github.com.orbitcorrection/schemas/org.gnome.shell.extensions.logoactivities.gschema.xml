@@ -36,6 +36,12 @@
       <description>
       </description>
     </key>
+    <key name="icon-size" type="i">
+      <range min="16" max="32"/>
+      <default>16</default>
+      <summary>Icon size</summary>
+      <description>Icon size in pixels (8-64)</description>
+    </key>
     <key name="icon-type" type="s">
       <default>'named'</default>
       <summary>Icon type</summary>
