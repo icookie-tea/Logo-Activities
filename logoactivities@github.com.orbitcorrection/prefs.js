@@ -50,11 +50,19 @@ function buildPrefsWidget(settings) {
         digits: 0,
         hexpand: true,
     });
-    sizeScale.set_size_request(150, -1);
+    sizeScale.set_size_request(120, -1);
+    let sizeValue = new Gtk.Label({
+        label: `${settings.get_int(KEY_ICON_SIZE)} px`,
+        xalign: 1,
+        width_chars: 6,
+    });
     sizeScale.connect('value-changed', scale => {
-        settings.set_int(KEY_ICON_SIZE, scale.get_value());
+        const val = scale.get_value();
+        settings.set_int(KEY_ICON_SIZE, val);
+        sizeValue.set_label(`${val} px`);
     });
     sizeHbox.append(sizeScale);
+    sizeHbox.append(sizeValue);
     iconVbox.append(sizeHbox);
 
     // Icon type radio buttons

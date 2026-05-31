@@ -4,7 +4,7 @@
 .activities-layout {
   spacing: 6px; }
 #panel .panel-button#panellogoActivities StBoxLayout {
- padding: 0 6px;}
+ padding: 0 0.2045em;}
 
 .workspace-indicators {
   spacing: 5px; }
