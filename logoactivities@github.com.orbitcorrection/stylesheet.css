@@ -7,10 +7,13 @@
 #panel .panel-button#panellogoActivities StBoxLayout {
  padding: 0 6px;}
 
-.ws-switcher-indicator {
-  padding: 2.6666666667px;
-  margin: 13.3333333333px;
-  border-radius: 32px; }
-  .ws-switcher-indicator:active {
-    padding: 5.3333333333px;
-    margin: 10.6666666667px; }
+.workspace-indicators {
+  spacing: 5px; }
+
+.workspace-dot {
+  border-radius: 999px;
+  min-width: 0.5455em;
+  min-height: 0.5455em;
+  background-color: #ffffff; }
+  .workspace-dot:active {
+    min-width: 1.091em; }

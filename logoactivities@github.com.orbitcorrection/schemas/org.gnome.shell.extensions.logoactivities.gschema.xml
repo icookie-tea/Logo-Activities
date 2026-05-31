@@ -36,11 +36,15 @@
       <description>
       </description>
     </key>
-   <key name="panel-indicator" type="b">
-      <default>false</default>
-      <summary>panel indicator</summary>
-      <description>
-      </description>
+    <key name="icon-type" type="s">
+      <default>'named'</default>
+      <summary>Icon type</summary>
+      <description>'named' to use a themed icon name, 'file' to use a custom icon file</description>
+    </key>
+    <key name="icon-file" type="s">
+      <default>''</default>
+      <summary>Custom icon file path</summary>
+      <description>Path to a custom icon file (PNG, SVG, etc.)</description>
     </key>
   </schema>
 </schemalist>

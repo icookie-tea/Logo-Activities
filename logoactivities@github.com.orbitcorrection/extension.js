@@ -31,11 +31,9 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Panel from 'resource:///org/gnome/shell/ui/panel.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as WorkspaceSwitcherPopup from 'resource:///org/gnome/shell/ui/workspaceSwitcherPopup.js';
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const N_QUICK_SETTINGS_COLUMNS = 2;
 const INACTIVE_WORKSPACE_DOT_SCALE = 0.75;
 
 const SCHEMA_NAME = 'org.gnome.shell.extensions.logoactivities';
@@ -45,7 +43,8 @@ const KEY_TEXT = 'text';
 const KEY_ICON = 'icon';
 const KEY_ICONNAME = 'icon-name';
 const KEY_SCROLL = 'scroll';
-const KEY_PANEL = 'panel-indicator';
+const KEY_ICON_TYPE = 'icon-type';
+const KEY_ICON_FILE = 'icon-file';
 
 
     const ActivitiesIndicator = GObject.registerClass(
@@ -63,13 +62,16 @@ const KEY_PANEL = 'panel-indicator';
            in your language, you can use the word for "Overview". */
            
         
-        this.text_label = settings.get_boolean(KEY_LABEL);        
+        this.text_label = settings.get_boolean(KEY_LABEL);
         this.activities_icon = settings.get_boolean(KEY_ICON);
         this.text = settings.get_string(KEY_TEXT);
         this.activities_icon_name = settings.get_string(KEY_ICONNAME);
         this.desktopscroll = settings.get_boolean(KEY_SCROLL);
         this.popup = settings.get_boolean(KEY_POPUP);
-        
+        this.icon_type = settings.get_string(KEY_ICON_TYPE);
+        this.icon_file = settings.get_string(KEY_ICON_FILE);
+        this._settings = settings;
+
         this._settingsID = settings.connect("changed", () => {
             this.text_label = settings.get_boolean(KEY_LABEL);
             this.activities_icon = settings.get_boolean(KEY_ICON);
@@ -77,8 +79,10 @@ const KEY_PANEL = 'panel-indicator';
             this.activities_icon_name = settings.get_string(KEY_ICONNAME);
             this.desktopscroll = settings.get_boolean(KEY_SCROLL);
             this.popup = settings.get_boolean(KEY_POPUP);
-            this._set_label();
+            this.icon_type = settings.get_string(KEY_ICON_TYPE);
+            this.icon_file = settings.get_string(KEY_ICON_FILE);
             this._set_icon();
+            this._set_label();
         });
         
         let bin = new St.Bin();
@@ -95,10 +99,13 @@ const KEY_PANEL = 'panel-indicator';
         this._label = new St.Label({
             text: _('Activities'),
             y_align: Clutter.ActorAlign.CENTER,
-        });        
+        });
         this._container.add_child(this._label);
-        
-        this._set_icon();              
+
+        this._workspaceIndicators = new WorkspaceIndicators();
+        this._container.add_child(this._workspaceIndicators);
+
+        this._set_icon();
         this._set_label();
         
         this.label_actor = this._label;
@@ -121,41 +128,55 @@ const KEY_PANEL = 'panel-indicator';
     }
    
      _set_icon() {
-     
-     if (this.activities_icon) {
-        const icon = new St.Icon({
-            icon_name: 'start-here',
-            style_class: 'activities-icon',
-        });
-        this._iconBox.set_child(icon);
-        
-        icon.icon_name = this.activities_icon_name;
-        
-        if(this.activities_icon_name === '')
-        this._iconBox.visible = false;
+        if (!this.activities_icon) {
+            this._iconBox.visible = false;
+            return;
+        }
 
+        // Destroy previous icon to avoid stale actor accumulation
+        const oldChild = this._iconBox.get_child();
+        if (oldChild)
+            oldChild.destroy();
+
+        let icon;
+        if (this.icon_type === 'file' && this.icon_file) {
+            try {
+                const file = Gio.File.new_for_commandline_arg(this.icon_file);
+                if (file.query_exists(null)) {
+                    const fileIcon = new Gio.FileIcon({file});
+                    icon = new St.Icon({
+                        gicon: fileIcon,
+                        style_class: 'activities-icon',
+                    });
+                }
+            } catch (e) {
+                // File not found or invalid; fall through to named icon
+            }
+        }
+
+        if (!icon) {
+            icon = new St.Icon({
+                icon_name: this.activities_icon_name || 'start-here',
+                style_class: 'activities-icon',
+            });
+        }
+
+        this._iconBox.set_child(icon);
         this._iconBox.visible = true;
-        }
-        else {
-        this._iconBox.visible = false;
-        }
-        
     }
     
     _set_label() {
-    
-        if(this.text_label) {
-        this._label.set_text(this.text);
-        
-        if(this.text === '')
-        this._label.visible = false;
-        
-        this._label.visible = true;
+        if (this.text_label) {
+            this._label.set_text(this.text || _('Activities'));
+            this._label.visible = true;
+        } else {
+            this._label.visible = false;
         }
-        else {
-        this._label.visible = false;
+
+        // Workspace dots are shown only when label is disabled
+        if (this._workspaceIndicators) {
+            this._workspaceIndicators.visible = !this.text_label;
         }
-        
     }
 
     handleDragOver(source, _actor, _x, _y, _time) {
@@ -332,9 +353,9 @@ const KEY_PANEL = 'panel-indicator';
         }
         
         if (this._settingsID) {
-        settings.disconnect(this._settingID);
-        this._settingsID = null;
-        }        
+            this._settings.disconnect(this._settingsID);
+            this._settingsID = null;
+        }
         
         super.destroy();
     }
@@ -435,7 +456,7 @@ const WorkspaceDot = GObject.registerClass({
 const WorkspaceIndicators = GObject.registerClass(
 class WorkspaceIndicators extends St.BoxLayout {
     constructor() {
-        super();
+        super({style_class: 'workspace-indicators'});
 
         this._workspacesAdjustment = Main.createWorkspacesAdjustment(this);
         this._workspacesAdjustment.connectObject(
@@ -477,8 +498,8 @@ class WorkspaceIndicators extends St.BoxLayout {
         const activeWorkspace = this._workspacesAdjustment.value;
 
         let widthMultiplier;
-        if (nIndicators <= 3)
-            widthMultiplier = 3.75;
+        if (nIndicators <= 2)
+            widthMultiplier = 3.625;
         else if (nIndicators <= 5)
             widthMultiplier = 3.25;
         else
@@ -493,67 +514,20 @@ class WorkspaceIndicators extends St.BoxLayout {
     }
 });
 
-const ActivitiesButton = GObject.registerClass(
-class ActivitiesButton extends PanelMenu.Button {
-    _init() {
-        super._init(0.5, _('Multi Tasking'));
-        this.reactive = false;
-        this.can_focus = false;
-        this.set({
-            name: 'panelActivities',
-        });
-        this.add_child(new WorkspaceIndicators());
-        
-        let item = new PopupMenu.PopupMenuItem(_('Multitasking Settings'));
-        item.connect('activate', () => {
-        Util.spawnCommandLine('gnome-control-center multitasking');
-        Main.overview.hide();
-        });
-        //this.menu.addMenuItem(item);
-}
-
-    vfunc_event(event) {
-        if (event.type() === Clutter.EventType.TOUCH_END ||
-            event.type() === Clutter.EventType.BUTTON_RELEASE) {
-            this.menu.toggle();
-        }
-        return Main.wm.handleWorkspaceScroll(event);
-    }    
-});
 
 export default class ActivitiesExtension extends Extension {
-
-    panel_indicator() {
-           this._indicator2 = new ActivitiesButton();
-           Main.panel.addToStatusArea('Workspaceactivities', this._indicator2, 0, 'right');
-           //Main.overview.connect('hidden', () => {this._indicator2.visible = true});
-           //Main.overview.connect('showing', () => {this._indicator2.visible = false});
-           
-        }
-
     enable() {
         this._settings = this.getSettings();
         Main.panel.statusArea['activities'].hide();
         this._indicator = new ActivitiesIndicator(this._settings);
         Main.panel.addToStatusArea('Logoactivities', this._indicator, 0, 'left');
-        if (this._settings.get_boolean(KEY_PANEL))
-        this.panel_indicator();
-        this._settings.connect('changed::'+ KEY_PANEL, () => {
-           this._indicator2?.destroy();
-           this._indicator2 = null;
-           if (this._settings.get_boolean(KEY_PANEL)) {
-            this.panel_indicator();
-            }
-           });
-}
+    }
 
     disable() {
         this._settings = null;
         this._indicator?.destroy();
         this._indicator = null;
-        this._indicator2?.destroy();
-        this._indicator2 = null;
-      
+
         if (Main.sessionMode.currentMode !== 'unlock-dialog')
             Main.panel.statusArea['activities'].show();
     }
