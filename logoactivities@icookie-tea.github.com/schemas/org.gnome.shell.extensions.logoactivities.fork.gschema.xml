@@ -1,5 +1,5 @@
 <schemalist gettext-domain="gnome-shell-extensions">
-  <schema id="org.gnome.shell.extensions.logoactivities" path="/org/gnome/shell/extensions/logoactivities/">
+  <schema id="org.gnome.shell.extensions.logoactivities.fork" path="/org/gnome/shell/extensions/logoactivities/fork/">
     <key name="label" type="b">
       <default>false</default>
       <summary>Show label</summary>

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a GNOME Shell extension ("Activities Icon & Label") that replaces the default "Activities" button in the GNOME top panel with a customizable icon and/or text label. It integrates workspace indicator dots directly into the replacement button and supports scroll-to-switch-workspaces.
+This is a GNOME Shell extension ("Activities Icon & Label (Fork)") that replaces the default "Activities" button in the GNOME top panel with a customizable icon and/or text label. It integrates workspace indicator dots directly into the replacement button and supports scroll-to-switch-workspaces.
 
-- **UUID**: `logoactivities@github.com.orbitcorrection`
+- **UUID**: `logoactivities@icookie-tea.github.com`
 - **Supported shell versions**: 45, 46, 47, 48, 49, 50
 - **License**: GPL-2.0-or-later
 
@@ -41,7 +41,7 @@ Uses libadwaita widgets (`Adw.PreferencesPage`, `Adw.PreferencesGroup`, `Adw.*Ro
 
 Uses `fillPreferencesWindow(window)` (modern API) with `settings.bind()` for bidirectional GSettings binding. File validation shows path in subtitle, with "File not found" prefix for missing files. Search enabled via `window.set_search_enabled(true)`.
 
-### `schemas/org.gnome.shell.extensions.logoactivities.gschema.xml`
+### `schemas/org.gnome.shell.extensions.logoactivities.fork.gschema.xml`
 
 GSettings keys:
 
@@ -72,17 +72,18 @@ No build system, bundler, or test suite exists. The extension is installed as a 
 ### Installing for testing
 
 ```bash
-ln -s "$PWD/logoactivities@github.com.orbitcorrection" ~/.local/share/gnome-shell/extensions/logoactivities@github.com.orbitcorrection
+rm -rf ~/.local/share/gnome-shell/extensions/logoactivities@icookie-tea.github.com
+cp -r logoactivities@icookie-tea.github.com ~/.local/share/gnome-shell/extensions/
 ```
 
 ### Enabling / debugging
 
 ```bash
 # Enable the extension
-gnome-extensions enable logoactivities@github.com.orbitcorrection
+gnome-extensions enable logoactivities@icookie-tea.github.com
 
 # Open preferences UI
-gnome-extensions prefs logoactivities@github.com.orbitcorrection
+gnome-extensions prefs logoactivities@icookie-tea.github.com
 
 # View extension logs
 journalctl -f -o cat /usr/bin/gnome-shell
@@ -100,7 +101,7 @@ On a running session (X11): press `Alt+F2`, type `r`, press Enter. On Wayland, l
 ### Schema compilation
 
 ```bash
-glib-compile-schemas logoactivities@github.com.orbitcorrection/schemas/
+glib-compile-schemas logoactivities@icookie-tea.github.com/schemas/
 ```
 
 ## Key GNOME Shell API patterns used

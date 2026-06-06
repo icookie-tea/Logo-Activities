@@ -16,9 +16,10 @@ A GNOME Shell extension that replaces the default "Activities" button with a cus
 ### From source
 
 ```bash
-git clone https://github.com/orbitcorrection/Logo-Activities.git
-ln -s "$PWD/Logo-Activities/logoactivities@github.com.orbitcorrection" ~/.local/share/gnome-shell/extensions/
-gnome-extensions enable logoactivities@github.com.orbitcorrection
+git clone https://github.com/icookie-tea/Logo-Activities.git
+rm -rf ~/.local/share/gnome-shell/extensions/logoactivities@icookie-tea.github.com
+cp -r logoactivities@icookie-tea.github.com ~/.local/share/gnome-shell/extensions/
+gnome-extensions enable logoactivities@icookie-tea.github.com
 ```
 
 ### Restart GNOME Shell
@@ -31,7 +32,7 @@ On Wayland: log out and back in, or use a nested session for development.
 Open the preferences UI:
 
 ```bash
-gnome-extensions prefs logoactivities@github.com.orbitcorrection
+gnome-extensions prefs logoactivities@icookie-tea.github.com
 ```
 
 Available settings:
