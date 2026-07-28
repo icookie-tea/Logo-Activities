@@ -11,6 +11,13 @@ A GNOME Shell extension that replaces the default "Activities" button with a cus
 - Optional workspace switcher popup overlay
 - Adjustable icon size (16–32 px)
 
+## Screenshots
+
+![Custom icon 1](screenshots/custom-icon-1.png)
+![Custom icon 2](screenshots/custom-icon-2.png)
+![Custom icon 3](screenshots/custom-icon-3.png)
+![Preferences](screenshots/preferences.png)
+
 ## Installation
 
 ### From source
@@ -42,7 +49,11 @@ Available settings:
 
 ## Compatibility
 
-GNOME Shell 45–50
+GNOME Shell 48–51
+
+## About
+
+This extension was developed with the assistance of LLM and is intended for personal use.
 
 ## License
 

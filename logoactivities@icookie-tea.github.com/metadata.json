@@ -3,12 +3,10 @@
   "name": "Activities Icon & Label (Fork)",
   "settings-schema": "org.gnome.shell.extensions.logoactivities.fork",
   "shell-version": [
-    "45",
-    "46",
-    "47",
     "48",
     "49",
-    "50"
+    "50",
+    "51"
   ],
   "url": "https://github.com/icookie-tea/Logo-Activities",
   "uuid": "logoactivities@icookie-tea.github.com",
